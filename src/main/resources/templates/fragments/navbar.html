@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/springsecurity6">
+<body>
+<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/}">☕ Cafe & Trà Sữa</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navMenu">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}">Trang chủ</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/products}">Thực đơn</a>
+                </li>
+            </ul>
+
+            <ul class="navbar-nav ms-auto align-items-center gap-2">
+                <!-- Giỏ hàng -->
+                <li class="nav-item">
+                    <a class="nav-link position-relative" th:href="@{/cart}">
+                        🛒
+                        <span id="cart-count"
+                              class="position-absolute top-0 start-100 translate-middle
+                                     badge rounded-pill bg-warning text-dark">0</span>
+                    </a>
+                </li>
+
+                <!-- Chưa đăng nhập -->
+                <li class="nav-item" sec:authorize="isAnonymous()">
+                    <a class="btn btn-outline-warning btn-sm"
+                       th:href="@{/login}">Đăng nhập</a>
+                </li>
+
+                <!-- Đã đăng nhập -->
+                <li class="nav-item dropdown" sec:authorize="isAuthenticated()">
+                    <a class="nav-link dropdown-toggle" href="#"
+                       data-bs-toggle="dropdown">
+                        👤 <span sec:authentication="name"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" th:href="@{/orders}">
+                                Đơn hàng của tôi
+                            </a>
+                        </li>
+                        <li sec:authorize="hasRole('ADMIN')">
+                            <a class="dropdown-item text-danger"
+                               th:href="@{/admin}">Quản trị</a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form th:action="@{/logout}" method="post">
+                                <button class="dropdown-item">Đăng xuất</button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+</body>
+</html>
