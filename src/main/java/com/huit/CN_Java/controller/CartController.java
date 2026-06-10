@@ -47,6 +47,20 @@ public class CartController {
         return "redirect:/products/" + productId;
     }
 
+    @PostMapping("/cart/buy-now")
+    public String buyNow(@RequestParam Long productId,
+                         @RequestParam(defaultValue = "1") int quantity,
+                         HttpSession session,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            cartService.addToCart(session, productService.getById(productId), quantity);
+            return "redirect:/checkout";
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("toastError", e.getMessage());
+            return "redirect:/products/" + productId;
+        }
+    }
+
     @PostMapping("/cart/update")
     public String updateCart(@RequestParam Long productId,
                              @RequestParam int quantity,

@@ -11,15 +11,25 @@
           position: absolute; top: -6px; right: -6px;
           background: #dc3545; color: #fff;
           border: none; border-radius: 50%;
-          width: 20px; height: 20px; font-size: .65rem;
-          cursor: pointer; display: flex; align-items: center; justify-content: center;
+          width: 22px; height: 22px; font-size: .65rem;
+          cursor: pointer;
+          display: none;
+          align-items: center; justify-content: center;
+          z-index: 2;
+        }
+        .img-preview-wrapper:hover .remove-img,
+        .img-preview-wrapper .remove-img.marked {
+          display: flex;
+        }
+        .img-preview-wrapper .remove-img.marked {
+          background: #6c757d;
         }
         .img-preview {
           width: 90px; height: 90px; object-fit: cover;
           border-radius: 8px; border: 2px solid #dee2e6;
           cursor: pointer;
         }
-        .img-preview.selected { border-color: #e8a838; }
+        .img-preview.selected { border-color: #e8a838; box-shadow: 0 0 0 2px #e8a83866; }
         .drop-zone {
           border: 2px dashed #dee2e6; border-radius: 10px;
           padding: 2rem; text-align: center; cursor: pointer;
@@ -27,6 +37,10 @@
         }
         .drop-zone:hover, .drop-zone.dragover {
           border-color: #e8a838; background: #fffbf0;
+        }
+        .primary-badge {
+          position: absolute; bottom: 2px; left: 2px;
+          font-size: .6rem; z-index: 1;
         }
     </style>
 </head>
@@ -91,18 +105,28 @@
 
                     <!-- Ảnh đã có (khi edit) -->
                     <div th:if="${existingImages != null and !#lists.isEmpty(existingImages)}" class="mb-3">
-                        <label class="form-label small text-muted">Ảnh hiện tại (click để xóa)</label>
-                        <div class="d-flex flex-wrap gap-2">
+                        <label class="form-label small text-muted">
+                            Ảnh hiện tại — <span class="text-warning fw-semibold">click ảnh để chọn làm ảnh chính</span>
+                            hoặc tích chọn để xóa
+                        </label>
+                        <div class="d-flex flex-wrap gap-2" id="existingImgArea">
                             <div th:each="img,iter : ${existingImages}" class="img-preview-wrapper">
                                 <input type="checkbox" name="deleteImageIds" th:value="${img.id}"
                                        th:id="'del_' + ${img.id}" class="d-none delete-img-check"/>
+                                <!-- Radio chọn ảnh chính từ ảnh cũ -->
+                                <input type="radio" name="primaryExistingImageId" th:value="${img.id}"
+                                       th:id="'pri_' + ${img.id}" class="d-none"
+                                       th:checked="${img.primary}"/>
                                 <img th:src="${img.imagePath}" class="img-preview"
                                      th:classappend="${img.primary} ? 'selected'"
                                      th:data-id="${img.id}"
-                                     onclick="toggleDeleteImg(this)"/>
-                                <span class="badge bg-warning text-dark" th:if="${img.primary}"
-                                      style="position:absolute;bottom:2px;left:2px;font-size:.6rem">Chính</span>
-                                <span class="remove-img d-none" th:id="'x_' + ${img.id}">✕</span>
+                                     th:onclick="'selectExistingPrimary(this, ' + ${img.id} + ')'"
+                                     alt="product image"/>
+                                <span class="badge bg-warning text-dark primary-badge"
+                                      th:id="'badge_' + ${img.id}"
+                                      th:style="${img.primary} ? '' : 'display:none'">Chính</span>
+                                <button type="button" class="remove-img" th:id="'x_' + ${img.id}"
+                                        th:onclick="'toggleDeleteImg(this, ' + ${img.id} + ')'">✕</button>
                             </div>
                         </div>
                     </div>
@@ -162,7 +186,43 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // ── Image preview & primary selection ──────────────────────
+    // ── Chọn ảnh chính từ ảnh cũ ──────────────────────────────
+    function selectExistingPrimary(imgEl, imgId) {
+        // Nếu đang đánh dấu xóa thì không cho chọn làm primary
+        const cb = document.getElementById('del_' + imgId);
+        if (cb && cb.checked) return;
+
+        // Bỏ selected + badge của tất cả ảnh cũ
+        document.querySelectorAll('#existingImgArea .img-preview').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('[id^="badge_"]').forEach(el => el.style.display = 'none');
+
+        // Bỏ selected của ảnh mới (nếu có)
+        document.querySelectorAll('#newImgPreviewArea .img-preview').forEach(el => el.classList.remove('selected'));
+        document.getElementById('primaryImageIndex').value = -1; // không dùng ảnh mới làm primary
+
+        imgEl.classList.add('selected');
+        document.getElementById('badge_' + imgId).style.display = '';
+        document.getElementById('pri_' + imgId).checked = true;
+    }
+
+    // ── Toggle xóa ảnh cũ ────────────────────────────────────────
+    function toggleDeleteImg(btnEl, imgId) {
+        const cb = document.getElementById('del_' + imgId);
+        const img = document.querySelector('[data-id="' + imgId + '"]');
+        cb.checked = !cb.checked;
+        // Khi đánh dấu xóa: làm mờ ảnh + đổi màu nút sang xám (class marked)
+        img.style.opacity = cb.checked ? '.3' : '1';
+        btnEl.classList.toggle('marked', cb.checked);
+        btnEl.title = cb.checked ? 'Bỏ đánh dấu xóa' : 'Xóa ảnh này';
+        // Nếu xóa ảnh đang là primary thì bỏ chọn
+        if (cb.checked && img.classList.contains('selected')) {
+            img.classList.remove('selected');
+            document.getElementById('badge_' + imgId).style.display = 'none';
+            document.getElementById('pri_' + imgId).checked = false;
+        }
+    }
+
+    // ── Image preview & primary selection (ảnh mới) ──────────────
     const input = document.getElementById('imageFiles');
     const previewArea = document.getElementById('newImgPreviewArea');
     const primaryInput = document.getElementById('primaryImageIndex');
@@ -170,24 +230,35 @@
     let selectedPrimary = 0;
 
     input.addEventListener('change', () => {
-      previewArea.innerHTML = '';
-      hint.style.display = input.files.length > 0 ? '' : 'none';
-      Array.from(input.files).forEach((file, i) => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'img-preview-wrapper';
-          wrapper.innerHTML = `<img src="${e.target.result}" class="img-preview${i===0?' selected':''}" data-index="${i}"/>`;
-          wrapper.querySelector('img').addEventListener('click', function() {
-            document.querySelectorAll('#newImgPreviewArea .img-preview').forEach(el => el.classList.remove('selected'));
-            this.classList.add('selected');
-            selectedPrimary = parseInt(this.dataset.index);
-            primaryInput.value = selectedPrimary;
-          });
-          previewArea.appendChild(wrapper);
-        };
-        reader.readAsDataURL(file);
-      });
+        previewArea.innerHTML = '';
+        hint.style.display = input.files.length > 0 ? '' : 'none';
+        if (input.files.length > 0) {
+            // Khi có ảnh mới, bỏ primary của ảnh cũ (trừ khi primaryImageIndex = -1)
+            document.querySelectorAll('#existingImgArea .img-preview').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('[id^="badge_"]').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('[id^="pri_"]').forEach(el => el.checked = false);
+            primaryInput.value = 0;
+        }
+        Array.from(input.files).forEach((file, i) => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'img-preview-wrapper';
+                wrapper.innerHTML = `<img src="${e.target.result}" class="img-preview${i===0?' selected':''}" data-index="${i}" title="Click để chọn làm ảnh chính"/>`;
+                wrapper.querySelector('img').addEventListener('click', function() {
+                    document.querySelectorAll('#newImgPreviewArea .img-preview').forEach(el => el.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedPrimary = parseInt(this.dataset.index);
+                    primaryInput.value = selectedPrimary;
+                    // Bỏ primary ảnh cũ
+                    document.querySelectorAll('#existingImgArea .img-preview').forEach(el => el.classList.remove('selected'));
+                    document.querySelectorAll('[id^="badge_"]').forEach(el => el.style.display = 'none');
+                    document.querySelectorAll('[id^="pri_"]').forEach(el => el.checked = false);
+                });
+                previewArea.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+        });
     });
 
     // ── Drag & drop ──────────────────────────────────────────────
@@ -195,20 +266,10 @@
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
     dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
     dz.addEventListener('drop', e => {
-      e.preventDefault(); dz.classList.remove('dragover');
-      input.files = e.dataTransfer.files;
-      input.dispatchEvent(new Event('change'));
+        e.preventDefault(); dz.classList.remove('dragover');
+        input.files = e.dataTransfer.files;
+        input.dispatchEvent(new Event('change'));
     });
-
-    // ── Toggle xóa ảnh cũ ────────────────────────────────────────
-    function toggleDeleteImg(img) {
-      const id = img.dataset.id;
-      const cb = document.getElementById('del_' + id);
-      const x  = document.getElementById('x_' + id);
-      cb.checked = !cb.checked;
-      img.style.opacity = cb.checked ? '.35' : '1';
-      x.classList.toggle('d-none', !cb.checked);
-    }
 </script>
 </body>
 </html>

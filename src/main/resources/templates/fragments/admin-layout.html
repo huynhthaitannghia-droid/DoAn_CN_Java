@@ -200,6 +200,12 @@
             <i class="bi bi-people"></i> Người dùng
         </a>
 
+        <a th:href="@{/admin/reviews}"
+           th:classappend="${#strings.contains(currentUri,'/admin/reviews')} ? 'active' : ''"
+           class="nav-link">
+            <i class="bi bi-star-half"></i> Đánh giá
+        </a>
+
         <div class="nav-section-label">Hệ thống</div>
         <a th:href="@{/}" class="nav-link" target="_blank">
             <i class="bi bi-shop"></i> Xem trang web

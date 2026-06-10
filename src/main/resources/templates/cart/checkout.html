@@ -71,11 +71,26 @@
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio"
-                                       name="paymentMethod" value="ONLINE" id="online">
-                                <label class="form-check-label" for="online">
-                                    💳 Ví điện tử
+                                       name="paymentMethod" value="BANK_TRANSFER" id="bank">
+                                <label class="form-check-label" for="bank">
+                                    🏦 Chuyển khoản ngân hàng
                                 </label>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Khu vực VietQR (Ẩn mặc định) -->
+                    <div id="vietqrArea" class="mb-3 p-3 border rounded bg-light" style="display: none;">
+                        <h6 class="fw-bold text-center mb-3">Quét mã VietQR để thanh toán</h6>
+                        <div class="text-center mb-3">
+                            <img id="qrImage" src="" alt="VietQR" class="img-fluid border shadow-sm" style="max-width: 200px;">
+                        </div>
+                        <div class="alert alert-warning py-2 mb-0 text-center" style="font-size: 0.85rem;">
+                            <i class="bi bi-clock-history me-1"></i>
+                            Mã QR hết hạn sau: <span id="countdown" class="fw-bold text-danger">15:00</span>
+                        </div>
+                        <div class="mt-2 small text-muted text-center">
+                            * Sau khi chuyển khoản, vui lòng nhấn <strong>Đặt hàng</strong> bên dưới.
                         </div>
                     </div>
 
@@ -120,8 +135,14 @@
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
     const rawTotal = [[${total}]];
+    let finalTotal = rawTotal; // Biến lưu tổng tiền cuối cùng (sau khi áp mã)
+
+    // Cấu hình ngân hàng (Cần khớp với thông tin bạn muốn nhận tiền)
+    const BANK_ID = "VCB"; // Tên viết tắt ngân hàng
+    const ACCOUNT_NO = "1040425808";
+    const ACCOUNT_NAME = "HUYNH THAI TAN NGHIA";
 
     // Đọc CSRF token từ meta tag
     const csrfToken  = document.querySelector('meta[name="_csrf"]').content;
@@ -129,6 +150,58 @@
 
     function fmt(n) {
         return n.toLocaleString('vi-VN') + 'đ';
+    }
+
+    // Xử lý hiện/ẩn VietQR và đếm ngược
+    const paymentRadios = document.querySelectorAll('input[name="paymentMethod"]');
+    const vietqrArea = document.getElementById('vietqrArea');
+    const qrImage = document.getElementById('qrImage');
+    const countdownEl = document.getElementById('countdown');
+    let timerInterval;
+
+    paymentRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'BANK_TRANSFER') {
+                showVietQR();
+            } else {
+                hideVietQR();
+            }
+        });
+    });
+
+    function showVietQR() {
+        // Tạo link VietQR động: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<INFO>&accountName=<NAME>
+        const description = "thanh toan hoa don";
+        const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png?amount=${finalTotal}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
+        
+        qrImage.src = qrUrl;
+        vietqrArea.style.display = 'block';
+        startCountdown(15 * 60); // 15 phút
+    }
+
+    function hideVietQR() {
+        vietqrArea.style.display = 'none';
+        clearInterval(timerInterval);
+    }
+
+    function startCountdown(seconds) {
+        clearInterval(timerInterval);
+        let time = seconds;
+        
+        function updateTimer() {
+            const m = Math.floor(time / 60);
+            const s = time % 60;
+            countdownEl.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            if (time <= 0) {
+                clearInterval(timerInterval);
+                countdownEl.textContent = "HẾT HẠN";
+                qrImage.style.filter = "grayscale(100%) opacity(0.5)";
+            }
+            time--;
+        }
+        
+        updateTimer();
+        timerInterval = setInterval(updateTimer, 1000);
     }
 
     function applyCoupon() {
@@ -168,6 +241,13 @@
                     '-' + fmt(data.discount);
                 document.getElementById('finalDisplay').textContent =
                     fmt(data.finalPrice);
+                
+                finalTotal = data.finalPrice; // Cập nhật tổng tiền cuối
+                
+                // Nếu đang hiện QR thì cập nhật lại mã với số tiền mới
+                if (document.getElementById('bank').checked) {
+                    showVietQR();
+                }
             } else {
                 msg.className = 'small mt-1 text-danger';
                 msg.textContent = data.message;
@@ -175,6 +255,10 @@
                 // Reset về giá gốc nếu mã không hợp lệ
                 document.getElementById('discountRow').style.display = 'none';
                 document.getElementById('finalDisplay').textContent = fmt(rawTotal);
+                finalTotal = rawTotal;
+                if (document.getElementById('bank').checked) {
+                    showVietQR();
+                }
             }
         })
         .catch(err => {

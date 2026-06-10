@@ -37,4 +37,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Double getRevenueByDate(@Param("date") LocalDate date);
 
     List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    /**
+     * Kiểm tra user đã từng mua sản phẩm này và đơn hàng đã COMPLETED chưa.
+     */
+    @Query("SELECT COUNT(oi) > 0 FROM OrderItem oi " +
+           "WHERE oi.order.user.id = :userId " +
+           "AND oi.product.id = :productId " +
+           "AND oi.order.status = com.huit.CN_Java.entity.Order$OrderStatus.COMPLETED")
+    boolean hasPurchasedProduct(@Param("userId") Long userId,
+                                @Param("productId") Long productId);
 }

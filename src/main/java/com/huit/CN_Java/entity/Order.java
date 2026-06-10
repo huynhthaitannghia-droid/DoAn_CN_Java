@@ -83,10 +83,38 @@ public class Order {
         public String getDescription() {
             return description;
         }
+
+        public java.util.List<OrderStatus> nextAllowed() {
+            return switch (this) {
+                case PENDING    -> java.util.List.of(CONFIRMED, CANCELLED);
+                case CONFIRMED  -> java.util.List.of(SHIPPING, CANCELLED);
+                case SHIPPING   -> java.util.List.of(COMPLETED);
+                case COMPLETED, CANCELLED -> java.util.List.of();
+            };
+        }
+    }
+
+    public String getStatusBadgeClass() {
+        return switch (this.status) {
+            case PENDING   -> "bg-warning text-dark";
+            case CONFIRMED -> "bg-success text-white";
+            case SHIPPING  -> "bg-info text-dark";
+            case COMPLETED -> "bg-primary text-white";
+            case CANCELLED -> "bg-secondary text-white";
+        };
+    }
+
+    public int getStatusIndex() {
+        OrderStatus[] flow = {OrderStatus.PENDING, OrderStatus.CONFIRMED,
+                              OrderStatus.SHIPPING, OrderStatus.COMPLETED};
+        for (int i = 0; i < flow.length; i++) {
+            if (flow[i] == this.status) return i;
+        }
+        return -1;
     }
 
     public enum PaymentMethod {
-        COD, ONLINE
+        COD, BANK_TRANSFER
     }
 
     // Helper: chỉ cho hủy khi đang PENDING

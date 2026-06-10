@@ -1,10 +1,12 @@
 package com.huit.CN_Java.service;
 
 import com.huit.CN_Java.entity.Product;
+import com.huit.CN_Java.entity.ProductImage;
 import com.huit.CN_Java.repository.ProductImageRepository;
 import com.huit.CN_Java.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -42,26 +44,25 @@ public class ProductService {
         return productRepository.findByCategoryIdAndActiveTrue(categoryId);
     }
 
-    // --- CÁC HÀM BỔ SUNG CHO ADMIN ---
-    public org.springframework.data.domain.Page<com.huit.CN_Java.entity.Product> searchAdmin(String keyword, Long categoryId, org.springframework.data.domain.Pageable pageable) {
+    public org.springframework.data.domain.Page<Product> searchAdmin(String keyword, Long categoryId, org.springframework.data.domain.Pageable pageable) {
         return productRepository.searchAdmin(keyword != null ? keyword : "", categoryId, pageable);
     }
 
-    public java.util.List<com.huit.CN_Java.entity.Product> getLowStockProducts(int threshold) {
+    public List<Product> getLowStockProducts(int threshold) {
         return productRepository.findLowStock(threshold);
     }
 
-    public java.util.List<com.huit.CN_Java.entity.Product> getTopSellingProducts(org.springframework.data.domain.Pageable pageable) {
+    public List<Product> getTopSellingProducts(org.springframework.data.domain.Pageable pageable) {
         return productRepository.findTopSelling(pageable);
     }
 
     public void toggleActive(Long id) {
-        com.huit.CN_Java.entity.Product product = findByIdOrThrow(id);
+        Product product = findByIdOrThrow(id);
         product.setActive(!product.isActive());
         productRepository.save(product);
     }
 
-    public com.huit.CN_Java.entity.Product save(com.huit.CN_Java.entity.Product product) {
+    public Product save(Product product) {
         return productRepository.save(product);
     }
 
@@ -69,32 +70,72 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    public void saveImages(com.huit.CN_Java.entity.Product product, java.util.List<String> imagePaths) {
-        if (imagePaths != null && !imagePaths.isEmpty()) {
-            for (int i = 0; i < imagePaths.size(); i++) {
-                com.huit.CN_Java.entity.ProductImage img = new com.huit.CN_Java.entity.ProductImage();
-                img.setImagePath(imagePaths.get(i));
-                img.setProduct(product);
-                img.setPrimary(i == 0);
-                productImageRepository.save(img);
-            }
+    /**
+     * Lưu danh sách ảnh mới cho sản phẩm.
+     * primaryIndex: vị trí (0-based) trong list là ảnh chính.
+     */
+    @Transactional
+    public void saveImages(Product product, List<String> imagePaths, int primaryIndex) {
+        if (imagePaths == null || imagePaths.isEmpty()) return;
+        // Bỏ flag primary của các ảnh cũ nếu có ảnh mới primary
+        List<ProductImage> existing = productImageRepository.findByProduct(product);
+        if (!existing.isEmpty()) {
+            existing.forEach(img -> img.setPrimary(false));
+            productImageRepository.saveAll(existing);
+        }
+        for (int i = 0; i < imagePaths.size(); i++) {
+            ProductImage img = new ProductImage();
+            img.setImagePath(imagePaths.get(i));
+            img.setProduct(product);
+            img.setPrimary(i == primaryIndex);
+            productImageRepository.save(img);
         }
     }
 
-    public void deleteImages(com.huit.CN_Java.entity.Product product) {
-        java.util.List<com.huit.CN_Java.entity.ProductImage> oldImages = productImageRepository.findByProduct(product);
+    /** Giữ tương thích với code cũ (mặc định ảnh đầu tiên là primary) */
+    public void saveImages(Product product, List<String> imagePaths) {
+        saveImages(product, imagePaths, 0);
+    }
+
+    public void deleteImages(Product product) {
+        List<ProductImage> oldImages = productImageRepository.findByProduct(product);
         productImageRepository.deleteAll(oldImages);
     }
 
-    public void deleteImagesByIds(java.util.List<Long> imageIds) {
+    public void deleteImagesByIds(List<Long> imageIds) {
         if (imageIds != null && !imageIds.isEmpty()) {
             productImageRepository.deleteAllById(imageIds);
         }
     }
 
-    public com.huit.CN_Java.entity.Product findByIdOrThrow(Long id) {
+    /**
+     * Đặt một ảnh cụ thể làm ảnh chính, bỏ primary của các ảnh khác cùng sản phẩm.
+     */
+    @Transactional
+    public void setPrimaryImage(Long productId, Long imageId) {
+        List<ProductImage> images = productImageRepository.findByProductId(productId);
+        for (ProductImage img : images) {
+            img.setPrimary(img.getId().equals(imageId));
+        }
+        productImageRepository.saveAll(images);
+    }
+
+    /**
+     * Bỏ flag primary của tất cả ảnh thuộc sản phẩm (trừ excludeId nếu != null).
+     */
+    @Transactional
+    public void clearOtherPrimary(Long productId, Long excludeId) {
+        List<ProductImage> images = productImageRepository.findByProductId(productId);
+        for (ProductImage img : images) {
+            if (excludeId == null || !img.getId().equals(excludeId)) {
+                img.setPrimary(false);
+            }
+        }
+        productImageRepository.saveAll(images);
+    }
+
+    public Product findByIdOrThrow(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
-
     }
 }

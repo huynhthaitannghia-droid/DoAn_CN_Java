@@ -54,8 +54,6 @@
                         <span th:unless="${u.locked}" class="badge bg-success">Hoạt động</span>
                     </td>
                     <td>
-                        <a th:href="@{/admin/users/{id}(id=${u.id})}"
-                           class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye"></i></a>
                         <form th:action="@{/admin/users/{id}/toggle-lock(id=${u.id})}"
                               method="post" class="d-inline">
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>

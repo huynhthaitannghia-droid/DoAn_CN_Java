@@ -160,10 +160,22 @@ public class OrderService {
         return orderRepository.getRevenueByDate(date);
     }
 
-    public void updateStatus(Long id, String status) {
+    public void updateStatus(Long id, String statusStr) {
         com.huit.CN_Java.entity.Order order = findByIdOrThrow(id);
-        // Ép kiểu String sang Enum OrderStatus tại đây
-        order.setStatus(com.huit.CN_Java.entity.Order.OrderStatus.valueOf(status));
+        com.huit.CN_Java.entity.Order.OrderStatus newStatus;
+        try {
+            newStatus = com.huit.CN_Java.entity.Order.OrderStatus.valueOf(statusStr);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Trạng thái không hợp lệ: " + statusStr);
+        }
+
+        if (!order.getStatus().nextAllowed().contains(newStatus)) {
+            throw new RuntimeException(
+                "Không thể chuyển từ \"" + order.getStatus().getDescription() +
+                "\" sang \"" + newStatus.getDescription() + "\"");
+        }
+
+        order.setStatus(newStatus);
         orderRepository.save(order);
     }
 

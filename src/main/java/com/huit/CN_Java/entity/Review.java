@@ -10,9 +10,12 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reviews")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"user", "product"})
+@EqualsAndHashCode(exclude = {"user", "product"})
 public class Review {
 
     @Id
@@ -34,7 +37,8 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
-    private boolean approved = false;
+    @Column(name = "admin_reply", columnDefinition = "TEXT")
+    private String adminReply;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

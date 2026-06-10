@@ -91,7 +91,9 @@
                     <dd class="col-7" th:text="${order.shippingAddress}"></dd>
                     <dt class="col-5 text-muted">Thanh toán</dt>
                     <dd class="col-7">
-                        <span class="badge bg-secondary" th:text="${order.paymentMethod}"></span>
+                        <span class="badge bg-secondary" 
+                              th:text="${order.paymentMethod == T(com.huit.CN_Java.entity.Order.PaymentMethod).COD 
+                              ? 'COD' : 'Chuyển khoản'}"></span>
                     </dd>
                     <dt th:if="${order.note != null}" class="col-5 text-muted">Ghi chú</dt>
                     <dd th:if="${order.note != null}" class="col-7 fst-italic" th:text="${order.note}"></dd>
@@ -101,32 +103,49 @@
             <!-- Cập nhật trạng thái -->
             <div class="admin-table p-3">
                 <h6 class="fw-600 mb-3"><i class="bi bi-arrow-repeat me-2"></i>Cập nhật trạng thái</h6>
-                <form th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                    <div class="mb-3">
-                        <select name="status" class="form-select form-select-sm">
-                            <option th:each="s : ${statuses}"
-                                    th:value="${s}" th:text="${s.description}"
-                                    th:selected="${order.status == s}"></option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm w-100">
-                        <i class="bi bi-check-lg me-1"></i>Cập nhật
-                    </button>
-                </form>
+
+                <!-- Chỉ hiện form nếu còn trạng thái hợp lệ để chuyển -->
+                <th:block th:if="${not #lists.isEmpty(order.status.nextAllowed())}">
+                    <form th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <div class="mb-3">
+                            <select name="status" class="form-select form-select-sm">
+                                <!-- Chỉ hiện các trạng thái được phép chuyển -->
+                                <option th:each="s : ${order.status.nextAllowed()}"
+                                        th:value="${s}"
+                                        th:text="${s.description}"></option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-check-lg me-1"></i>Cập nhật
+                        </button>
+                    </form>
+                </th:block>
+                <th:block th:unless="${not #lists.isEmpty(order.status.nextAllowed())}">
+                    <p class="text-muted small fst-italic mb-0">
+                        Đơn hàng đã kết thúc, không thể thay đổi trạng thái.
+                    </p>
+                </th:block>
 
                 <!-- Timeline trạng thái -->
                 <div class="mt-3">
                     <div class="small text-muted mb-2">Tiến trình:</div>
-                    <div th:each="s,iter : ${ {T(com.huit.CN_Java.entity.Order.OrderStatus).PENDING, T(com.huit.CN_Java.entity.Order.OrderStatus).CONFIRMED, T(com.huit.CN_Java.entity.Order.OrderStatus).SHIPPING, T(com.huit.CN_Java.entity.Order.OrderStatus).COMPLETED} }"
-                         class="d-flex align-items-center gap-2 mb-1">
-                        <i th:classappend="${order.status == s} ? 'bi-record-circle-fill text-primary' :
-                               (${iter.index < #arrays.indexOf({T(com.huit.CN_Java.entity.Order.OrderStatus).PENDING, T(com.huit.CN_Java.entity.Order.OrderStatus).CONFIRMED, T(com.huit.CN_Java.entity.Order.OrderStatus).SHIPPING, T(com.huit.CN_Java.entity.Order.OrderStatus).COMPLETED}, order.status)}) ? 'bi-check-circle-fill text-success' :
-                               'bi-circle text-muted'"
-                           class="bi small"></i>
-                        <span class="small" th:text="${s.description}"
-                              th:classappend="${order.status == s} ? 'fw-600 text-primary' : 'text-muted'"></span>
-                    </div>
+                    <th:block th:with="flowStatuses=${ {T(com.huit.CN_Java.entity.Order.OrderStatus).PENDING,
+                                                        T(com.huit.CN_Java.entity.Order.OrderStatus).CONFIRMED,
+                                                        T(com.huit.CN_Java.entity.Order.OrderStatus).SHIPPING,
+                                                        T(com.huit.CN_Java.entity.Order.OrderStatus).COMPLETED} },
+                                        currentIdx=${order.statusIndex}">
+                        <div th:each="s,iter : ${flowStatuses}"
+                             class="d-flex align-items-center gap-2 mb-1">
+                            <i class="bi small"
+                               th:classappend="${order.status == s}    ? 'bi-record-circle-fill text-primary' :
+                                               (${iter.index < currentIdx} ? 'bi-check-circle-fill text-success' :
+                                                                              'bi-circle text-muted')"></i>
+                            <span class="small"
+                                  th:text="${s.description}"
+                                  th:classappend="${order.status == s} ? 'fw-600 text-primary' : 'text-muted'"></span>
+                        </div>
+                    </th:block>
                 </div>
             </div>
         </div>

@@ -36,8 +36,23 @@
         </p>
         <p><strong>Thanh toán:</strong>
             <span th:text="${order.paymentMethod == T(com.huit.CN_Java.entity.Order.PaymentMethod).COD
-                ? 'COD (Thanh toán khi nhận)' : 'Ví điện tử'}"></span>
+                ? 'COD (Thanh toán khi nhận)' : 'Chuyển khoản ngân hàng'}"></span>
         </p>
+
+        <!-- Thông tin chuyển khoản (NẾU CHỌN CHUYỂN KHOẢN) -->
+        <div th:if="${order.paymentMethod == T(com.huit.CN_Java.entity.Order.PaymentMethod).BANK_TRANSFER}"
+             class="alert alert-info border-0 shadow-sm">
+            <h6 class="fw-bold mb-2"><i class="bi bi-bank me-2"></i>Thông tin chuyển khoản</h6>
+            <div class="small">
+                <p class="mb-1">Ngân hàng: <strong>Vietcombank (VCB)</strong></p>
+                <p class="mb-1">Số tài khoản: <strong>1040425808</strong></p>
+                <p class="mb-1">Chủ tài khoản: <strong>HUYNH THAI TAN NGHIA</strong></p>
+                <p class="mb-0">Nội dung: <strong>thanh toán hóa đơn <span th:text="${order.id}"></span></strong></p>
+            </div>
+            <div class="mt-2 text-muted" style="font-size: 0.75rem;">
+                * Đơn hàng sẽ được xác nhận sau khi chúng tôi nhận được thanh toán.
+            </div>
+        </div>
 
         <hr>
 
