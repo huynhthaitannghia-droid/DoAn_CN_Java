@@ -12,9 +12,12 @@ import java.util.List;
 
 @Entity
 @Table(name = "products")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"images", "reviews", "category"})
+@EqualsAndHashCode(exclude = {"images", "reviews", "category"})
 public class Product {
 
     @Id
@@ -66,5 +69,16 @@ public class Product {
     // Helper: giá hiển thị (ưu tiên sale price)
     public Double getDisplayPrice() {
         return (salePrice != null && salePrice > 0) ? salePrice : price;
+    }
+
+    // Helper lấy ảnh chính — thêm method này
+    @Transient
+    public String getPrimaryImageUrl() {
+        if (images == null || images.isEmpty()) return null;
+        return images.stream()
+                .filter(ProductImage::isPrimary)
+                .findFirst()
+                .map(ProductImage::getImagePath)
+                .orElse(images.get(0).getImagePath());
     }
 }

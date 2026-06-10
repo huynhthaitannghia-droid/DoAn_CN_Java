@@ -6,9 +6,12 @@ import lombok.*;
 
 @Entity
 @Table(name = "order_items")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"order", "product"})
+@EqualsAndHashCode(exclude = {"order", "product"})
 public class OrderItem {
 
     @Id

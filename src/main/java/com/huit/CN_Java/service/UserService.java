@@ -35,4 +35,30 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
     }
+
+    // --- CÁC HÀM BỔ SUNG CHO ADMIN ---
+    public long countAllUsers() {
+        return userRepository.count();
+    }
+
+    public org.springframework.data.domain.Page<com.huit.CN_Java.entity.User> searchAdmin(String keyword, org.springframework.data.domain.Pageable pageable) {
+        return userRepository.searchAdmin(keyword != null ? keyword : "", pageable);
+    }
+
+    public void toggleLock(Long id) {
+        com.huit.CN_Java.entity.User user = findByIdOrThrow(id);
+        user.setLocked(!user.isLocked());
+        userRepository.save(user);
+    }
+
+    public void setRole(Long id, com.huit.CN_Java.entity.Role role) {
+        com.huit.CN_Java.entity.User user = findByIdOrThrow(id);
+        user.setRole(role);
+        userRepository.save(user);
+    }
+
+    public com.huit.CN_Java.entity.User findByIdOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+    }
 }

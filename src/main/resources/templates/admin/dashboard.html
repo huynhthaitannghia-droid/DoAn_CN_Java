@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dashboard — Cafe Admin</title>
+    <th:block th:replace="~{fragments/admin-layout :: adminHead}"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<th:block th:replace="~{fragments/admin-layout :: sidebar}"/>
+<th:block th:replace="~{fragments/admin-layout :: topbar('Dashboard')}"/>
+<th:block th:replace="~{fragments/admin-layout :: flashMessages}"/>
+
+<main id="main-content">
+
+    <!-- ── STAT CARDS ─────────────────────────────────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#fff3cd">
+                    <i class="bi bi-currency-dollar text-warning fs-4"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Doanh thu</div>
+                    <div class="stat-value text-warning"
+                         th:text="${#numbers.formatDecimal(totalRevenue,0,'COMMA',0,'POINT') + '₫'}">0₫</div>
+                    <small class="text-muted">
+                        <i class="bi bi-arrow-up-short text-success"></i>
+                        so với tháng trước
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#cfe2ff">
+                    <i class="bi bi-receipt text-primary fs-4"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Đơn hàng</div>
+                    <div class="stat-value text-primary" th:text="${totalOrders}">0</div>
+                    <small class="text-warning" th:text="${pendingOrders + ' chờ xử lý'}"></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#d1e7dd">
+                    <i class="bi bi-box-seam text-success fs-4"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Sản phẩm</div>
+                    <div class="stat-value text-success" th:text="${totalProducts}">0</div>
+                    <small class="text-muted">đang kinh doanh</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#f8d7da">
+                    <i class="bi bi-people text-danger fs-4"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Người dùng</div>
+                    <div class="stat-value text-danger" th:text="${totalUsers}">0</div>
+                    <small class="text-muted">tài khoản</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── REVENUE CHART + ORDER STATUS ─────────────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="admin-table p-3" style="border-radius:12px">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 fw-600">Doanh thu 7 ngày gần nhất</h6>
+                </div>
+                <canvas id="revenueChart" height="100"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="admin-table p-3 h-100" style="border-radius:12px">
+                <h6 class="mb-3 fw-600">Trạng thái đơn hàng</h6>
+                <canvas id="orderStatusChart" height="220"></canvas>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span><span class="badge" style="background:#fff3cd;color:#856404">●</span> Chờ xử lý</span>
+                        <strong th:text="${pendingOrders}">0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span><span class="badge" style="background:#cfe2ff;color:#084298">●</span> Đang xử lý</span>
+                        <strong th:text="${processingOrders}">0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span><span class="badge" style="background:#d1e7dd;color:#0f5132">●</span> Hoàn thành</span>
+                        <strong th:text="${completedOrders}">0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span><span class="badge" style="background:#f8d7da;color:#842029">●</span> Đã hủy</span>
+                        <strong th:text="${cancelledOrders}">0</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── RECENT ORDERS + LOW STOCK ────────────────────────── -->
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="admin-table">
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-600">Đơn hàng gần nhất</h6>
+                    <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>Mã ĐH</th>
+                            <th>Khách hàng</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày đặt</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="order : ${recentOrders}">
+                            <td class="fw-500" th:text="'#' + ${order.id}"></td>
+                            <td th:text="${order.user.fullName}"></td>
+                            <td th:text="${#numbers.formatDecimal(order.finalPrice,0,'COMMA',0,'POINT') + '₫'}"></td>
+                            <td>
+                  <span class="badge rounded-pill"
+                        th:classappend="'badge-' + ${order.status}"
+                        th:text="${order.status.description}"></span>
+                            </td>
+                            <td th:text="${#temporals.format(order.createdAt,'dd/MM/yyyy')}"></td>
+                            <td>
+                                <a th:href="@{/admin/orders/{id}(id=${order.id})}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(recentOrders)}">
+                            <td colspan="6" class="text-center text-muted py-3">Chưa có đơn hàng nào</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="admin-table">
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-600 text-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Sắp hết hàng
+                    </h6>
+                    <a th:href="@{/admin/products}" class="btn btn-sm btn-outline-secondary">Quản lý</a>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li th:each="p : ${lowStockProducts}"
+                        class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+                        <div>
+                            <div class="small fw-500" th:text="${p.name}"></div>
+                            <div class="text-muted" style="font-size:.75rem"
+                                 th:text="${p.category?.name}"></div>
+                        </div>
+                        <span class="badge bg-danger rounded-pill" th:text="${p.stock} + ' còn'"></span>
+                    </li>
+                    <li th:if="${#lists.isEmpty(lowStockProducts)}"
+                        class="list-group-item text-center text-muted py-3 small">
+                        Tất cả sản phẩm đều còn hàng
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- Chart.js data injection -->
+<script th:inline="javascript">
+    const revenueData = /*[[${revenueByDay}]]*/ {};
+    const pending    = /*[[${pendingOrders}]]*/ 0;
+    const processing = /*[[${processingOrders}]]*/ 0;
+    const completed  = /*[[${completedOrders}]]*/ 0;
+    const cancelled  = /*[[${cancelledOrders}]]*/ 0;
+</script>
+<script>
+    // Revenue line chart
+    const labels  = Object.keys(revenueData);
+    const values  = Object.values(revenueData).map(Number);
+    new Chart(document.getElementById('revenueChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Doanh thu (₫)',
+          data: values,
+          borderColor: '#e8a838',
+          backgroundColor: 'rgba(232,168,56,.12)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: '#e8a838'
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            ticks: { callback: v => v.toLocaleString('vi') + '₫' },
+            grid: { color: '#f0f0f0' }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Order status doughnut
+    new Chart(document.getElementById('orderStatusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Chờ xử lý','Đang xử lý','Hoàn thành','Đã hủy'],
+        datasets: [{
+          data: [pending, processing, completed, cancelled],
+          backgroundColor: ['#ffc107','#0d6efd','#198754','#dc3545'],
+          borderWidth: 0
+        }]
+      },
+      options: { cutout: '65%', plugins: { legend: { display: false } } }
+    });
+
+    // Auto-dismiss toast after 3s
+    document.querySelectorAll('.toast').forEach(t => {
+      setTimeout(() => t.classList.remove('show'), 3000);
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

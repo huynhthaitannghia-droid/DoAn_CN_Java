@@ -25,7 +25,6 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
@@ -36,7 +35,7 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/cart/**", "/checkout/**", "/orders/**").hasRole("USER")
+                        .requestMatchers("/cart/**", "/checkout/**", "/orders/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(
                                 "/", "/products/**", "/login", "/register",
                                 "/css/**", "/js/**", "/images/**", "/uploads/**"
@@ -56,6 +55,7 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/login?logout=true")
                         .permitAll()
                 )
+                .exceptionHandling(ex -> ex.accessDeniedPage("/error/403"))
                 .rememberMe(remember -> remember
                         .key("cafe-secret-key")
                         .tokenValiditySeconds(7 * 24 * 60 * 60)

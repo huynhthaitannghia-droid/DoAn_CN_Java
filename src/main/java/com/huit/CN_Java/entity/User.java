@@ -10,9 +10,12 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
+@EqualsAndHashCode
 public class User {
 
     @Id
@@ -41,4 +44,8 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    // Khóa tài khoản
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean locked = false;
 }

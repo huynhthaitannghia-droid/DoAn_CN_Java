@@ -21,4 +21,31 @@ public class CategoryService {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục"));
     }
+
+    // --- CÁC HÀM BỔ SUNG CHO ADMIN TỪ BƯỚC 4 ---
+
+    public List<Category> findAllWithProductCount() {
+        List<Category> cats = categoryRepository.findAll();
+        cats.forEach(c -> c.setProductCount(
+                (long) c.getProducts().size()
+        ));
+        return cats;
+    }
+
+    public boolean existsByName(String name) {
+        return categoryRepository.existsByNameIgnoreCase(name);
+    }
+
+    public Category save(Category category) {
+        return categoryRepository.save(category);
+    }
+
+    public Category findByIdOrThrow(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục"));
+    }
+
+    public void deleteById(Long id) {
+        categoryRepository.deleteById(id);
+    }
 }

@@ -11,9 +11,12 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"items", "user", "coupon"})
+@EqualsAndHashCode(exclude = {"items", "user", "coupon"})
 public class Order {
 
     @Id
@@ -65,11 +68,21 @@ public class Order {
     private LocalDateTime updatedAt;
 
     public enum OrderStatus {
-        PENDING,    // Chờ xác nhận
-        CONFIRMED,  // Đã xác nhận
-        SHIPPING,   // Đang giao
-        COMPLETED,  // Hoàn thành
-        CANCELLED   // Đã hủy
+        PENDING("Chờ xác nhận"),
+        CONFIRMED("Đã xác nhận"),
+        SHIPPING("Đang giao"),
+        COMPLETED("Hoàn thành"),
+        CANCELLED("Đã hủy");
+
+        private final String description;
+
+        OrderStatus(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
     }
 
     public enum PaymentMethod {

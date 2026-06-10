@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${product.id != null} ? 'Sửa sản phẩm' : 'Thêm sản phẩm'">Sản phẩm</title>
+    <th:block th:replace="~{fragments/admin-layout :: adminHead}"/>
+    <style>
+        .img-preview-wrapper {
+          position: relative; display: inline-block;
+        }
+        .img-preview-wrapper .remove-img {
+          position: absolute; top: -6px; right: -6px;
+          background: #dc3545; color: #fff;
+          border: none; border-radius: 50%;
+          width: 20px; height: 20px; font-size: .65rem;
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .img-preview {
+          width: 90px; height: 90px; object-fit: cover;
+          border-radius: 8px; border: 2px solid #dee2e6;
+          cursor: pointer;
+        }
+        .img-preview.selected { border-color: #e8a838; }
+        .drop-zone {
+          border: 2px dashed #dee2e6; border-radius: 10px;
+          padding: 2rem; text-align: center; cursor: pointer;
+          transition: border-color .2s, background .2s;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+          border-color: #e8a838; background: #fffbf0;
+        }
+    </style>
+</head>
+<body>
+<th:block th:replace="~{fragments/admin-layout :: sidebar}"/>
+<th:block th:replace="~{fragments/admin-layout :: topbar(${product.id != null} ? 'Sửa sản phẩm' : 'Thêm sản phẩm')}"/>
+
+<main id="main-content">
+    <div class="mb-3">
+        <a th:href="@{/admin/products}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+
+    <form th:action="${product.id != null} ? @{/admin/products/{id}/edit(id=${product.id})} : @{/admin/products/create}"
+          method="post" enctype="multipart/form-data" th:object="${product}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+        <div class="row g-3">
+            <!-- ── LEFT: Thông tin cơ bản ── -->
+            <div class="col-lg-8">
+                <div class="admin-table p-4 mb-3">
+                    <h6 class="fw-600 mb-3">Thông tin sản phẩm</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-500">Tên sản phẩm <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" th:field="*{name}"
+                               th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'" placeholder="VD: Cà phê sữa đá"/>
+                        <div class="invalid-feedback" th:errors="*{name}"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-500">Mô tả</label>
+                        <textarea class="form-control" th:field="*{description}" rows="4"
+                                  placeholder="Mô tả ngắn về sản phẩm…"></textarea>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-sm-4">
+                            <label class="form-label fw-500">Giá gốc (₫) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" th:field="*{price}" min="0" step="1000"
+                                   th:classappend="${#fields.hasErrors('price')} ? 'is-invalid'"/>
+                            <div class="invalid-feedback" th:errors="*{price}"></div>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-500">Giá sale (₫)</label>
+                            <input type="number" class="form-control" th:field="*{salePrice}" min="0" step="1000"/>
+                            <div class="form-text text-muted">Để trống nếu không giảm giá</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-500">Tồn kho <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" th:field="*{stock}" min="0"
+                                   th:classappend="${#fields.hasErrors('stock')} ? 'is-invalid'"/>
+                            <div class="invalid-feedback" th:errors="*{stock}"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Ảnh sản phẩm ── -->
+                <div class="admin-table p-4">
+                    <h6 class="fw-600 mb-3">Ảnh sản phẩm</h6>
+
+                    <!-- Ảnh đã có (khi edit) -->
+                    <div th:if="${existingImages != null and !#lists.isEmpty(existingImages)}" class="mb-3">
+                        <label class="form-label small text-muted">Ảnh hiện tại (click để xóa)</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div th:each="img,iter : ${existingImages}" class="img-preview-wrapper">
+                                <input type="checkbox" name="deleteImageIds" th:value="${img.id}"
+                                       th:id="'del_' + ${img.id}" class="d-none delete-img-check"/>
+                                <img th:src="${img.imagePath}" class="img-preview"
+                                     th:classappend="${img.primary} ? 'selected'"
+                                     th:data-id="${img.id}"
+                                     onclick="toggleDeleteImg(this)"/>
+                                <span class="badge bg-warning text-dark" th:if="${img.primary}"
+                                      style="position:absolute;bottom:2px;left:2px;font-size:.6rem">Chính</span>
+                                <span class="remove-img d-none" th:id="'x_' + ${img.id}">✕</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload ảnh mới -->
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('imageFiles').click()">
+                        <i class="bi bi-cloud-upload fs-3 text-muted mb-2 d-block"></i>
+                        <div class="text-muted small">Kéo thả ảnh vào đây hoặc click để chọn</div>
+                        <div class="text-muted" style="font-size:.72rem">PNG, JPG, WEBP — tối đa 5MB/ảnh</div>
+                    </div>
+                    <input type="file" id="imageFiles" name="imageFiles" multiple accept="image/*" class="d-none"/>
+                    <input type="hidden" name="primaryImageIndex" id="primaryImageIndex" value="0"/>
+
+                    <div class="d-flex flex-wrap gap-2 mt-3" id="newImgPreviewArea"></div>
+                    <div class="form-text mt-1" id="primaryHint" style="display:none">
+                        <i class="bi bi-info-circle me-1"></i>Click vào ảnh để chọn làm ảnh chính (viền vàng)
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── RIGHT: Danh mục + cài đặt ── -->
+            <div class="col-lg-4">
+                <div class="admin-table p-4 mb-3">
+                    <h6 class="fw-600 mb-3">Phân loại</h6>
+                    <label class="form-label fw-500">Danh mục <span class="text-danger">*</span></label>
+                    <select class="form-select" th:field="*{category.id}"
+                            th:classappend="${#fields.hasErrors('category')} ? 'is-invalid'">
+                        <option value="">— Chọn danh mục —</option>
+                        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"></option>
+                    </select>
+                    <div class="invalid-feedback" th:errors="*{category}"></div>
+                </div>
+
+                <div class="admin-table p-4 mb-3">
+                    <h6 class="fw-600 mb-3">Cài đặt</h6>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" th:field="*{active}" id="activeSwitch"/>
+                        <label class="form-check-label" for="activeSwitch">Đang bán</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" th:field="*{featured}" id="featuredSwitch"/>
+                        <label class="form-check-label" for="featuredSwitch">Nổi bật (hiển thị trang chủ)</label>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>
+                        <span th:text="${product.id != null} ? 'Lưu thay đổi' : 'Thêm sản phẩm'"></span>
+                    </button>
+                    <a th:href="@{/admin/products}" class="btn btn-outline-secondary">Hủy</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ── Image preview & primary selection ──────────────────────
+    const input = document.getElementById('imageFiles');
+    const previewArea = document.getElementById('newImgPreviewArea');
+    const primaryInput = document.getElementById('primaryImageIndex');
+    const hint = document.getElementById('primaryHint');
+    let selectedPrimary = 0;
+
+    input.addEventListener('change', () => {
+      previewArea.innerHTML = '';
+      hint.style.display = input.files.length > 0 ? '' : 'none';
+      Array.from(input.files).forEach((file, i) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'img-preview-wrapper';
+          wrapper.innerHTML = `<img src="${e.target.result}" class="img-preview${i===0?' selected':''}" data-index="${i}"/>`;
+          wrapper.querySelector('img').addEventListener('click', function() {
+            document.querySelectorAll('#newImgPreviewArea .img-preview').forEach(el => el.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedPrimary = parseInt(this.dataset.index);
+            primaryInput.value = selectedPrimary;
+          });
+          previewArea.appendChild(wrapper);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    // ── Drag & drop ──────────────────────────────────────────────
+    const dz = document.getElementById('dropZone');
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('dragover');
+      input.files = e.dataTransfer.files;
+      input.dispatchEvent(new Event('change'));
+    });
+
+    // ── Toggle xóa ảnh cũ ────────────────────────────────────────
+    function toggleDeleteImg(img) {
+      const id = img.dataset.id;
+      const cb = document.getElementById('del_' + id);
+      const x  = document.getElementById('x_' + id);
+      cb.checked = !cb.checked;
+      img.style.opacity = cb.checked ? '.35' : '1';
+      x.classList.toggle('d-none', !cb.checked);
+    }
+</script>
+</body>
+</html>

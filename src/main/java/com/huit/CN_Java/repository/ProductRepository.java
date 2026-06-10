@@ -1,6 +1,8 @@
 package com.huit.CN_Java.repository;
 
 import com.huit.CN_Java.entity.Product;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -47,4 +49,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Cảnh báo sắp hết hàng cho Admin
     List<Product> findByStockLessThanAndActiveTrue(int threshold);
+
+    @Query("SELECT p FROM Product p WHERE (:keyword='' OR LOWER(p.name) LIKE LOWER(CONCAT('%',:keyword,'%'))) AND (:categoryId IS NULL OR p.category.id=:categoryId)")
+    Page<Product> searchAdmin(@Param("keyword") String keyword,
+                              @Param("categoryId") Long categoryId, Pageable pageable);
+
+    @Query("SELECT p FROM Product p WHERE p.stock < :threshold ORDER BY p.stock ASC")
+    List<Product> findLowStock(@Param("threshold") int threshold);
+
+    @Query("SELECT oi.product FROM OrderItem oi GROUP BY oi.product ORDER BY SUM(oi.quantity) DESC")
+    List<Product> findTopSelling(Pageable pageable);
 }

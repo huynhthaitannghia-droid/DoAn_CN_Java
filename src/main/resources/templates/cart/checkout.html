@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Thanh toán</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- CSRF token cho fetch -->
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container my-5">
+    <h4 class="fw-bold mb-4">💳 Thanh toán</h4>
+
+    <div th:if="${errorMsg}" class="alert alert-danger" th:text="${errorMsg}"></div>
+
+    <div class="row g-4">
+        <!-- Form thông tin giao hàng -->
+        <div class="col-md-7">
+            <div class="card shadow-sm p-4">
+                <h6 class="fw-bold mb-3">Thông tin giao hàng</h6>
+                <form th:action="@{/checkout}" method="post"
+                      th:object="${checkoutDTO}" id="checkoutForm">
+
+                    <div class="mb-3">
+                        <label class="form-label">Địa chỉ giao hàng *</label>
+                        <textarea th:field="*{shippingAddress}" class="form-control"
+                                  rows="2" placeholder="Số nhà, đường, phường, quận, tỉnh/thành"></textarea>
+                        <div class="text-danger small" th:errors="*{shippingAddress}"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Số điện thoại *</label>
+                        <input type="text" th:field="*{phone}" class="form-control"
+                               placeholder="0901234567">
+                        <div class="text-danger small" th:errors="*{phone}"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <input type="text" th:field="*{note}" class="form-control"
+                               placeholder="Ít đường, ít đá...">
+                    </div>
+
+                    <!-- Mã giảm giá -->
+                    <div class="mb-3">
+                        <label class="form-label">Mã giảm giá</label>
+                        <div class="input-group">
+                            <input type="text" id="couponInput" class="form-control"
+                                   th:field="*{couponCode}" placeholder="Nhập mã...">
+                            <button type="button" class="btn btn-outline-warning"
+                                    onclick="applyCoupon()">Áp dụng</button>
+                        </div>
+                        <div id="couponMsg" class="small mt-1"></div>
+                    </div>
+
+                    <!-- Phương thức thanh toán -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phương thức thanh toán</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="paymentMethod" value="COD"
+                                       id="cod" checked>
+                                <label class="form-check-label" for="cod">
+                                    💵 COD (Thanh toán khi nhận)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="paymentMethod" value="ONLINE" id="online">
+                                <label class="form-check-label" for="online">
+                                    💳 Ví điện tử
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100 fw-bold btn-lg">
+                        Đặt hàng
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tóm tắt đơn hàng -->
+        <div class="col-md-5">
+            <div class="card shadow-sm p-3">
+                <h6 class="fw-bold mb-3">Đơn hàng của bạn</h6>
+                <div th:each="item : ${cartItems}"
+                     class="d-flex justify-content-between mb-2 small">
+                    <span th:text="${item.productName} + ' × ' + ${item.quantity}"></span>
+                    <span th:text="${#numbers.formatDecimal(item.subtotal,0,'COMMA',0,'POINT')} + 'đ'">
+                    </span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Tạm tính</span>
+                    <span id="totalDisplay"
+                          th:text="${#numbers.formatDecimal(total,0,'COMMA',0,'POINT')} + 'đ'">
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between text-success" id="discountRow"
+                     style="display:none">
+                    <span>Giảm giá</span>
+                    <span id="discountDisplay">-0đ</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between fw-bold fs-5">
+                    <span>Tổng cộng</span>
+                    <span class="text-danger" id="finalDisplay"
+                          th:text="${#numbers.formatDecimal(total,0,'COMMA',0,'POINT')} + 'đ'">
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const rawTotal = [[${total}]];
+
+    // Đọc CSRF token từ meta tag
+    const csrfToken  = document.querySelector('meta[name="_csrf"]').content;
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]').content;
+
+    function fmt(n) {
+        return n.toLocaleString('vi-VN') + 'đ';
+    }
+
+    function applyCoupon() {
+        const code = document.getElementById('couponInput').value.trim();
+        const msg  = document.getElementById('couponMsg');
+
+        if (!code) {
+            msg.className = 'small mt-1 text-danger';
+            msg.textContent = 'Vui lòng nhập mã giảm giá';
+            return;
+        }
+
+        // Disable nút tránh click nhiều lần
+        const btn = document.querySelector('button[onclick="applyCoupon()"]');
+        btn.disabled = true;
+        btn.textContent = 'Đang kiểm tra...';
+
+        fetch('/checkout/apply-coupon', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                [csrfHeader]: csrfToken          // ← gửi kèm CSRF token
+            },
+            body: 'code=' + encodeURIComponent(code)
+        })
+        .then(r => {
+            if (!r.ok) throw new Error('Lỗi server: ' + r.status);
+            return r.json();
+        })
+        .then(data => {
+            if (data.success) {
+                msg.className = 'small mt-1 text-success';
+                msg.textContent = data.message;
+
+                document.getElementById('discountRow').style.display = 'flex';
+                document.getElementById('discountDisplay').textContent =
+                    '-' + fmt(data.discount);
+                document.getElementById('finalDisplay').textContent =
+                    fmt(data.finalPrice);
+            } else {
+                msg.className = 'small mt-1 text-danger';
+                msg.textContent = data.message;
+
+                // Reset về giá gốc nếu mã không hợp lệ
+                document.getElementById('discountRow').style.display = 'none';
+                document.getElementById('finalDisplay').textContent = fmt(rawTotal);
+            }
+        })
+        .catch(err => {
+            // Bắt lỗi mạng / server không trả về JSON
+            msg.className = 'small mt-1 text-danger';
+            msg.textContent = 'Có lỗi xảy ra, vui lòng thử lại. (' + err.message + ')';
+            document.getElementById('discountRow').style.display = 'none';
+            document.getElementById('finalDisplay').textContent = fmt(rawTotal);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Áp dụng';
+        });
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

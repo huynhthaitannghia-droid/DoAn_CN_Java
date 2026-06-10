@@ -2,18 +2,19 @@ package com.huit.CN_Java.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "categories")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"products"})
+@EqualsAndHashCode(exclude = {"products"})
 public class Category {
 
     @Id
@@ -34,4 +35,13 @@ public class Category {
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Product> products = new ArrayList<>();
+
+    private String slug;
+
+    @Column(name = "sort_order", columnDefinition = "int default 0")
+    private int sortOrder = 0;
+
+    // Dùng trong admin list, không lưu DB
+    @Transient
+    private Long productCount;
 }
