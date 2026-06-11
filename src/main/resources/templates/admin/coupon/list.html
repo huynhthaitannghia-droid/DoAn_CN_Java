@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head th:replace="~{fragments/admin-layout :: adminHead}">
+    <title>Quản lý mã giảm giá</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+
+<header th:replace="~{fragments/admin-layout :: topbar('Quản lý mã giảm giá')}"></header>
+
+<main id="main-content">
+
+    <div th:replace="~{fragments/admin-layout :: flashMessages}"></div>
+
+    <!-- Page header -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h5 class="mb-0 fw-bold">Mã giảm giá</h5>
+            <small class="text-muted" th:text="'Tổng cộng ' + ${#lists.size(coupons)} + ' mã'"></small>
+        </div>
+        <button class="btn btn-sm btn-warning fw-semibold" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-1"></i>Thêm mã mới
+        </button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#fff3cd">
+                    <i class="bi bi-ticket-perforated-fill" style="color:#e8a838"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Tổng mã</div>
+                    <div class="stat-value" th:text="${#lists.size(coupons)}">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#d1e7dd">
+                    <i class="bi bi-check-circle-fill" style="color:#0f5132"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Đang hoạt động</div>
+                    <div class="stat-value"
+                         th:text="${#lists.size(coupons.?[active == true])}">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#f8d7da">
+                    <i class="bi bi-x-circle-fill" style="color:#842029"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Đã tắt</div>
+                    <div class="stat-value"
+                         th:text="${#lists.size(coupons.?[active == false])}">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#cfe2ff">
+                    <i class="bi bi-graph-up" style="color:#084298"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Tổng lượt dùng</div>
+                    <div class="stat-value"
+                         th:text="${#aggregates.sum(coupons.![usedCount])}">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="admin-table">
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Mã</th>
+                <th>Loại</th>
+                <th>Giá trị</th>
+                <th>Đơn tối thiểu</th>
+                <th>Lượt dùng</th>
+                <th>Hết hạn</th>
+                <th>Trạng thái</th>
+                <th class="text-center">Thao tác</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(coupons)}">
+                <td colspan="9" class="text-center text-muted py-4">
+                    <i class="bi bi-ticket-perforated fs-3 d-block mb-2"></i>Chưa có mã giảm giá nào
+                </td>
+            </tr>
+            <tr th:each="c, i : ${coupons}">
+                <td class="text-muted small" th:text="${i.count}"></td>
+                <td>
+                    <span class="badge bg-dark font-monospace fs-6 fw-normal px-2 py-1"
+                          th:text="${c.code}"></span>
+                </td>
+                <td>
+                    <span th:if="${c.discountType.name() == 'PERCENT'}"
+                          class="badge" style="background:#fff3cd;color:#856404">
+                        <i class="bi bi-percent me-1"></i>Phần trăm
+                    </span>
+                    <span th:unless="${c.discountType.name() == 'PERCENT'}"
+                          class="badge" style="background:#cfe2ff;color:#084298">
+                        <i class="bi bi-currency-dollar me-1"></i>Số tiền cố định
+                    </span>
+                </td>
+                <td class="fw-semibold">
+                    <span th:if="${c.discountType.name() == 'PERCENT'}"
+                          th:text="${c.discountValue + '%'}"></span>
+                    <span th:unless="${c.discountType.name() == 'PERCENT'}"
+                          th:text="${#numbers.formatDecimal(c.discountValue,0,'COMMA',0,'POINT') + '₫'}"></span>
+                </td>
+                <td th:text="${c.minOrderValue != null and c.minOrderValue > 0 ?
+                    #numbers.formatDecimal(c.minOrderValue,0,'COMMA',0,'POINT') + '₫' : '—'}"></td>
+                <td>
+                    <span th:text="${c.usedCount}">0</span>
+                    <span th:if="${c.maxUses != null}" class="text-muted small"
+                          th:text="'/ ' + ${c.maxUses}"></span>
+                </td>
+                <td>
+                    <span th:if="${c.expiryDate == null}" class="text-muted">Không giới hạn</span>
+                    <span th:unless="${c.expiryDate == null}">
+                        <span th:if="${c.expiryDate.isBefore(#temporals.createNow())}"
+                              class="text-danger small">
+                            <i class="bi bi-clock-history me-1"></i>
+                            <span th:text="${#temporals.format(c.expiryDate,'dd/MM/yyyy')}"></span>
+                        </span>
+                        <span th:unless="${c.expiryDate.isBefore(#temporals.createNow())}"
+                              class="small" th:text="${#temporals.format(c.expiryDate,'dd/MM/yyyy')}"></span>
+                    </span>
+                </td>
+                <td>
+                    <form th:action="@{'/admin/coupons/' + ${c.id} + '/toggle'}" method="post" class="d-inline">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="badge border-0"
+                                th:classappend="${c.active} ? 'bg-success' : 'bg-secondary'"
+                                title="Nhấn để đổi trạng thái"
+                                style="cursor:pointer">
+                            <i th:classappend="${c.active} ? 'bi-toggle-on' : 'bi-toggle-off'"
+                               class="bi me-1"></i>
+                            <span th:text="${c.active} ? 'Hoạt động' : 'Tắt'"></span>
+                        </button>
+                    </form>
+                </td>
+                <td class="text-center">
+                    <div class="d-flex gap-1 justify-content-center">
+                        <a th:href="@{'/admin/coupons/' + ${c.id} + '/edit'}"
+                           class="btn btn-sm btn-outline-primary py-0 px-2">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger py-0 px-2"
+                                data-bs-toggle="modal"
+                                th:data-bs-target="'#deleteModal-' + ${c.id}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Delete confirm modals -->
+    <div th:each="c : ${coupons}">
+        <div class="modal fade" th:id="'deleteModal-' + ${c.id}" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header border-0 pb-0">
+                        <h6 class="modal-title text-danger"><i class="bi bi-trash me-2"></i>Xóa mã giảm giá</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body pt-1">
+                        <p class="mb-0 small">Bạn có chắc muốn xóa mã
+                            <strong class="font-monospace" th:text="${c.code}"></strong>?
+                            Hành động này không thể hoàn tác.
+                        </p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <form th:action="@{'/admin/coupons/' + ${c.id} + '/delete'}" method="post" class="d-inline">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- ═══ CREATE MODAL ═══════════════════════════════════════════════ -->
+<div class="modal fade" id="createModal" tabindex="-1"
+     th:classappend="${showCreateModal} ? 'show' : ''"
+     th:style="${showCreateModal} ? 'display:block' : ''">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form th:action="@{/admin/coupons/create}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <div class="modal-header" style="background:var(--sidebar-bg)">
+                    <h6 class="modal-title text-white"><i class="bi bi-plus-circle me-2"></i>Thêm mã giảm giá mới</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Mã giảm giá <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control font-monospace text-uppercase"
+                                   name="code" required maxlength="50"
+                                   placeholder="VD: SUMMER20"
+                                   th:value="${newCoupon?.code}"
+                                   style="text-transform:uppercase"/>
+                            <div class="form-text">Tự động chuyển thành chữ hoa</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Loại giảm giá <span class="text-danger">*</span></label>
+                            <select name="discountType" class="form-select" required>
+                                <option value="">-- Chọn loại --</option>
+                                <option value="PERCENT">Phần trăm (%)</option>
+                                <option value="FIXED">Số tiền cố định (₫)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Giá trị giảm <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="discountValue"
+                                   required min="0" step="0.01" placeholder="VD: 10"/>
+                            <div class="form-text">Nhập % hoặc số tiền tùy loại đã chọn</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Đơn hàng tối thiểu (₫)</label>
+                            <input type="number" class="form-control" name="minOrderValue"
+                                   min="0" step="1000" placeholder="0 = không giới hạn"/>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Số lần dùng tối đa</label>
+                            <input type="number" class="form-control" name="maxUses"
+                                   min="1" placeholder="Để trống = không giới hạn"/>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Ngày hết hạn</label>
+                            <input type="datetime-local" class="form-control" name="expiryDate"/>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="active"
+                                       id="createActive" checked/>
+                                <label class="form-check-label small" for="createActive">Kích hoạt ngay</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning btn-sm fw-semibold">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm mã
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade show" th:if="${showCreateModal}"></div>
+
+<!-- ═══ EDIT MODAL ════════════════════════════════════════════════ -->
+<div th:if="${showEditModal and coupon != null}"
+     class="modal fade show" id="editModal" tabindex="-1" style="display:block">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form th:action="@{'/admin/coupons/' + ${editId} + '/edit'}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <div class="modal-header" style="background:var(--sidebar-bg)">
+                    <h6 class="modal-title text-white"><i class="bi bi-pencil me-2"></i>Chỉnh sửa mã giảm giá</h6>
+                    <a th:href="@{/admin/coupons}" class="btn-close btn-close-white"></a>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Mã giảm giá <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control font-monospace text-uppercase"
+                                   name="code" required maxlength="50"
+                                   th:value="${coupon.code}"
+                                   style="text-transform:uppercase"/>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Loại giảm giá <span class="text-danger">*</span></label>
+                            <select name="discountType" class="form-select" required>
+                                <option value="PERCENT"
+                                        th:selected="${coupon.discountType.name() == 'PERCENT'}">Phần trăm (%)</option>
+                                <option value="FIXED"
+                                        th:selected="${coupon.discountType.name() == 'FIXED'}">Số tiền cố định (₫)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Giá trị giảm <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="discountValue"
+                                   required min="0" step="0.01" th:value="${coupon.discountValue}"/>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Đơn hàng tối thiểu (₫)</label>
+                            <input type="number" class="form-control" name="minOrderValue"
+                                   min="0" step="1000" th:value="${coupon.minOrderValue}"/>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Số lần dùng tối đa</label>
+                            <input type="number" class="form-control" name="maxUses"
+                                   min="1" th:value="${coupon.maxUses}" placeholder="Để trống = không giới hạn"/>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Ngày hết hạn</label>
+                            <input type="datetime-local" class="form-control" name="expiryDate"
+                                   th:value="${coupon.expiryDate != null ?
+                                       #temporals.format(coupon.expiryDate, 'yyyy-MM-dd') + 'T' + #temporals.format(coupon.expiryDate, 'HH:mm') : ''}"/>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="active"
+                                       id="editActive" th:checked="${coupon.active}"/>
+                                <label class="form-check-label small" for="editActive">Kích hoạt</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a th:href="@{/admin/coupons}" class="btn btn-secondary btn-sm">Hủy</a>
+                    <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+                        <i class="bi bi-save me-1"></i>Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade show" th:if="${showEditModal}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Auto uppercase mã khi nhập
+    document.querySelectorAll('input[name="code"]').forEach(el => {
+        el.addEventListener('input', () => el.value = el.value.toUpperCase());
+    });
+</script>
+</body>
+</html>

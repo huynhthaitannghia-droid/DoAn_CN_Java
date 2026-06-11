@@ -47,6 +47,9 @@ public class UserService {
 
     public void toggleLock(Long id) {
         com.huit.CN_Java.entity.User user = findByIdOrThrow(id);
+        if (user.getRole() == com.huit.CN_Java.entity.Role.ADMIN && !user.isLocked()) {
+            throw new RuntimeException("Không thể khóa tài khoản Admin");
+        }
         user.setLocked(!user.isLocked());
         userRepository.save(user);
     }

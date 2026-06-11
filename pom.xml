@@ -141,6 +141,9 @@
 									<artifactId>lombok</artifactId>
 								</path>
 							</annotationProcessorPaths>
+							<compilerArgs>
+								<arg>-parameters</arg>
+							</compilerArgs>
 						</configuration>
 					</execution>
 					<execution>
@@ -156,6 +159,9 @@
 									<artifactId>lombok</artifactId>
 								</path>
 							</annotationProcessorPaths>
+							<compilerArgs>
+								<arg>-parameters</arg>
+							</compilerArgs>
 						</configuration>
 					</execution>
 				</executions>

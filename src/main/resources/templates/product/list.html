@@ -5,6 +5,39 @@
     <title>Thực đơn</title>
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        /* ── Quick View Modal ─────────────────────────────── */
+        #quickViewModal .modal-dialog {
+            max-width: 680px;
+        }
+        #quickViewModal .qv-img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: .5rem;
+        }
+        #quickViewModal .qv-price-original {
+            font-size: .9rem;
+            text-decoration: line-through;
+            color: #aaa;
+        }
+        #quickViewModal .qv-price-main {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #dc3545;
+        }
+        #quickViewModal .qv-stock-ok  { color: #198754; font-weight: 600; }
+        #quickViewModal .qv-stock-low { color: #dc3545; font-weight: 600; }
+
+        /* ── Card hover overlay ───────────────────────────── */
+        .product-card { transition: box-shadow .2s; }
+        .product-card:hover { box-shadow: 0 .5rem 1.2rem rgba(0,0,0,.15) !important; }
+
+        /* ── Loading spinner trong modal ─────────────────── */
+        #qvSpinner { display: none; }
+    </style>
 </head>
 <body>
 
@@ -75,6 +108,152 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     MODAL QUICK VIEW
+     ══════════════════════════════════════════════════ -->
+<div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="qvTitle">Đang tải...</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body pt-2">
+
+                <!-- Spinner -->
+                <div id="qvSpinner" class="text-center py-4">
+                    <div class="spinner-border text-warning" role="status"></div>
+                    <p class="mt-2 text-muted small">Đang tải thông tin...</p>
+                </div>
+
+                <!-- Nội dung sản phẩm -->
+                <div id="qvContent" class="row g-3">
+                    <!-- Ảnh -->
+                    <div class="col-5">
+                        <img id="qvImg" src="" alt="product" class="qv-img">
+                    </div>
+                    <!-- Thông tin -->
+                    <div class="col-7 d-flex flex-column">
+                        <span id="qvCategory" class="badge bg-warning text-dark mb-2 align-self-start"></span>
+                        <div class="mb-2">
+                            <span id="qvPriceOriginal" class="qv-price-original me-1"></span>
+                            <span id="qvPrice" class="qv-price-main"></span>
+                            <span id="qvSaleBadge" class="badge bg-danger ms-1 d-none">SALE</span>
+                        </div>
+                        <p id="qvDesc" class="text-secondary small flex-grow-1"
+                           style="max-height:120px; overflow-y:auto"></p>
+                        <p class="mb-3">
+                            Tồn kho: <span id="qvStock"></span>
+                        </p>
+                        <!-- Nút hành động -->
+                        <div class="d-flex gap-2">
+                            <a id="qvDetailLink" href="#"
+                               class="btn btn-warning fw-bold flex-grow-1">
+                                Xem chi tiết
+                            </a>
+                            <a id="qvCartLink" href="#"
+                               class="btn btn-outline-dark flex-grow-1">
+                                🛒 Thêm vào giỏ
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<!-- ══════════════════════════════════════════════════ -->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ── Helpers ────────────────────────────────────────────────
+    const fmt = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
+
+    const $ = id => document.getElementById(id);
+
+    // ── Quick View logic ───────────────────────────────────────
+    const modal       = new bootstrap.Modal(document.getElementById('quickViewModal'));
+    const spinner     = $('qvSpinner');
+    const content     = $('qvContent');
+
+    function showSpinner() {
+        spinner.style.display = 'block';
+        content.style.display = 'none';
+    }
+
+    function hideSpinner() {
+        spinner.style.display = 'none';
+        content.style.display = 'flex';   // row flex
+    }
+
+    async function openQuickView(productId) {
+        // 1. Mở modal ngay, hiện spinner
+        showSpinner();
+        $('qvTitle').textContent = 'Xem nhanh';
+        modal.show();
+
+        // 2. Gọi API
+        try {
+            const res  = await fetch(`/api/products/${productId}/quickview`);
+            if (!res.ok) throw new Error('Không tải được sản phẩm');
+            const p = await res.json();
+
+            // 3. Điền dữ liệu vào modal
+            $('qvTitle').textContent        = p.name;
+            $('qvImg').src                  = p.thumbnail || '/images/default.png';
+            $('qvImg').onerror              = () => { $('qvImg').src = '/images/default.png'; };
+            $('qvDesc').textContent         = p.description || 'Không có mô tả.';
+            $('qvCategory').textContent     = p.category || '';
+            $('qvPrice').textContent        = fmt(p.displayPrice);
+
+            // Giá gốc & badge SALE
+            if (p.salePrice) {
+                $('qvPriceOriginal').textContent = fmt(p.price);
+                $('qvSaleBadge').classList.remove('d-none');
+            } else {
+                $('qvPriceOriginal').textContent = '';
+                $('qvSaleBadge').classList.add('d-none');
+            }
+
+            // Tồn kho
+            const stockEl = $('qvStock');
+            stockEl.textContent = p.stock > 0 ? `${p.stock} sản phẩm` : 'Hết hàng';
+            stockEl.className   = p.stock > 0
+                ? (p.stock < 5 ? 'qv-stock-low' : 'qv-stock-ok')
+                : 'qv-stock-low';
+
+            // Links
+            $('qvDetailLink').href = `/products/${p.id}`;
+            $('qvCartLink').href   = p.stock > 0
+                ? `/products/${p.id}#add-to-cart`
+                : '#';
+
+            if (p.stock === 0) {
+                $('qvCartLink').classList.add('disabled');
+                $('qvCartLink').textContent = 'Hết hàng';
+            } else {
+                $('qvCartLink').classList.remove('disabled');
+                $('qvCartLink').textContent = '🛒 Thêm vào giỏ';
+            }
+
+            hideSpinner();
+
+        } catch (err) {
+            $('qvTitle').textContent = 'Lỗi';
+            spinner.innerHTML = `<p class="text-danger py-3">⚠️ ${err.message}</p>`;
+        }
+    }
+
+    // ── Gắn sự kiện cho tất cả nút Quick View trên trang ──────
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.quick-view-btn');
+        if (btn) openQuickView(btn.dataset.id);
+    });
+</script>
 </body>
 </html>

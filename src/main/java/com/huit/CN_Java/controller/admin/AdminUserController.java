@@ -34,8 +34,12 @@ public class AdminUserController {
 
     @PostMapping("/{id}/toggle-lock")
     public String toggleLock(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        userService.toggleLock(id);
-        redirectAttributes.addFlashAttribute("successMsg", "Da cap nhat tai khoan");
+        try {
+            userService.toggleLock(id);
+            redirectAttributes.addFlashAttribute("successMsg", "Đã cập nhật trạng thái tài khoản");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+        }
         return "redirect:/admin/users";
     }
 }

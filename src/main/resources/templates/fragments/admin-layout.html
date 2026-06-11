@@ -181,6 +181,12 @@
                   class="badge-count" th:text="${pendingCount}"></span>
         </a>
 
+        <a th:href="@{/admin/coupons}"
+           th:classappend="${#strings.contains(currentUri,'/admin/coupons')} ? 'active' : ''"
+           class="nav-link">
+            <i class="bi bi-ticket-perforated"></i> Mã giảm giá
+        </a>
+
         <div class="nav-section-label">Danh mục</div>
         <a th:href="@{/admin/products}"
            th:classappend="${#strings.contains(currentUri,'/admin/products')} ? 'active' : ''"
