@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import com.huit.CN_Java.config.OAuth2LoginSuccessHandler;
+import com.huit.CN_Java.service.CustomOAuth2UserService;
 
 @Configuration
 @EnableWebSecurity
@@ -16,6 +18,10 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
+
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+
+    private final CustomOAuth2UserService customOAuth2UserService;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -38,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/cart/**", "/checkout/**", "/orders/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(
                                 "/", "/products/**", "/login", "/register",
+                                "/forgot-password", "/reset-password",
                                 "/css/**", "/js/**", "/images/**", "/uploads/**"
                         ).permitAll()
                         .anyRequest().authenticated()
@@ -49,6 +56,13 @@ public class SecurityConfig {
                         .defaultSuccessUrl("/", true)
                         .failureUrl("/login?error=true")
                         .permitAll()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .defaultSuccessUrl("/", true)
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")

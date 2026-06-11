@@ -54,7 +54,7 @@ public class HomeController {
 
     @GetMapping("/products/{id}")
     public String productDetail(@PathVariable Long id,
-                                @AuthenticationPrincipal UserDetails userDetails,
+                                @AuthenticationPrincipal com.huit.CN_Java.security.CustomUserDetails userDetails,
                                 Model model) {
         model.addAttribute("product", productService.getById(id));
         model.addAttribute("reviews", reviewService.getReviewsByProduct(id));

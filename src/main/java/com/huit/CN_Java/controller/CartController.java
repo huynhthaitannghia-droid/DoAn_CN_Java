@@ -86,7 +86,7 @@ public class CartController {
 
     @GetMapping("/checkout")
     public String checkoutPage(HttpSession session, Model model,
-                               @AuthenticationPrincipal UserDetails userDetails) {
+                               @AuthenticationPrincipal com.huit.CN_Java.security.CustomUserDetails userDetails) {
         if (cartService.getCart(session).isEmpty()) {
             return "redirect:/cart";
         }
@@ -134,7 +134,7 @@ public class CartController {
     public String placeOrder(@Valid @ModelAttribute CheckoutDTO checkoutDTO,
                              BindingResult result,
                              HttpSession session,
-                             @AuthenticationPrincipal UserDetails userDetails,
+                             @AuthenticationPrincipal com.huit.CN_Java.security.CustomUserDetails userDetails,
                              Model model,
                              RedirectAttributes redirectAttributes) {
         if (result.hasErrors()) {
@@ -166,7 +166,7 @@ public class CartController {
     // ==================== LỊCH SỬ ĐƠN HÀNG ====================
 
     @GetMapping("/orders")
-    public String orderHistory(@AuthenticationPrincipal UserDetails userDetails,
+    public String orderHistory(@AuthenticationPrincipal com.huit.CN_Java.security.CustomUserDetails userDetails,
                                Model model) {
         model.addAttribute("orders",
                 orderService.getOrdersByUser(userDetails.getUsername()));
@@ -175,7 +175,7 @@ public class CartController {
 
     @GetMapping("/orders/{id}")
     public String orderDetail(@PathVariable Long id, Model model,
-                              @AuthenticationPrincipal UserDetails userDetails) {
+                              @AuthenticationPrincipal com.huit.CN_Java.security.CustomUserDetails userDetails) {
         Order order = orderService.getOrderById(id);
         if (!order.getUser().getEmail().equals(userDetails.getUsername())) {
             return "redirect:/orders";
@@ -186,7 +186,7 @@ public class CartController {
 
     @PostMapping("/orders/{id}/cancel")
     public String cancelOrder(@PathVariable Long id,
-                              @AuthenticationPrincipal UserDetails userDetails,
+                              @AuthenticationPrincipal com.huit.CN_Java.security.CustomUserDetails userDetails,
                               RedirectAttributes redirectAttributes) {
         try {
             orderService.cancelOrder(id, userDetails.getUsername());

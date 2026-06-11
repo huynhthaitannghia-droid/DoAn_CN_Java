@@ -48,4 +48,7 @@ public class User {
     // Khóa tài khoản
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean locked = false;
+
+    @Column(name = "oauth2_provider")
+    private String oauth2Provider; // "google", "facebook", hoặc null nếu đăng ký thường
 }
