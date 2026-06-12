@@ -109,4 +109,9 @@ public class AuthController {
             return "redirect:/forgot-password";
         }
     }
+
+    @GetMapping("/error/403")
+    public String accessDenied() {
+        return "error/403";
+    }
 }

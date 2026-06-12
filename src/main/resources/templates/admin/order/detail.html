@@ -92,7 +92,7 @@
                     <dt class="col-5 text-muted">Thanh toán</dt>
                     <dd class="col-7">
                         <span class="badge bg-secondary" 
-                              th:text="${order.paymentMethod == T(com.huit.CN_Java.entity.Order.PaymentMethod).COD 
+                              th:text="${order.paymentMethod == T(com.huit.CN_Java.entity.Order$PaymentMethod).COD 
                               ? 'COD' : 'Chuyển khoản'}"></span>
                     </dd>
                     <dt th:if="${order.note != null}" class="col-5 text-muted">Ghi chú</dt>
@@ -130,10 +130,10 @@
                 <!-- Timeline trạng thái -->
                 <div class="mt-3">
                     <div class="small text-muted mb-2">Tiến trình:</div>
-                    <th:block th:with="flowStatuses=${ {T(com.huit.CN_Java.entity.Order.OrderStatus).PENDING,
-                                                        T(com.huit.CN_Java.entity.Order.OrderStatus).CONFIRMED,
-                                                        T(com.huit.CN_Java.entity.Order.OrderStatus).SHIPPING,
-                                                        T(com.huit.CN_Java.entity.Order.OrderStatus).COMPLETED} },
+                    <th:block th:with="flowStatuses=${ {T(com.huit.CN_Java.entity.Order$OrderStatus).PENDING,
+                                                        T(com.huit.CN_Java.entity.Order$OrderStatus).CONFIRMED,
+                                                        T(com.huit.CN_Java.entity.Order$OrderStatus).SHIPPING,
+                                                        T(com.huit.CN_Java.entity.Order$OrderStatus).COMPLETED} },
                                         currentIdx=${order.statusIndex}">
                         <div th:each="s,iter : ${flowStatuses}"
                              class="d-flex align-items-center gap-2 mb-1">
